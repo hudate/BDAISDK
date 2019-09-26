@@ -1,67 +1,83 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-import urllib
-from urllib import request
+import sys
+sys.path.append('..')
+
 import json
 import base64
-import requests
-from BDOCR import getAccessToken
-
-OCRAK = YourAK  # 需要更改
-OCRSK = YourSK  # 需要更改
-
-token = getAccessToken.getToken(OCRAK, OCRSK)
-# print(token)
-
-print('')
-print('--++++++++++++++--')
-print('--|百度云OCR识别|--')
-print('--++++++++++++++--')
-print('')
+from bd_api import BDTOKEN
 
 
-# 高精度识别
-# baidu_api_url = 'https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic?access_token=' + token
+OCRAK = 'Your OCRAK'
+OCRSK = 'Your OCRSK'
 
-# 一般精度
-baidu_api_url = 'https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic?access_token=' + token
 
-# 网络图片识别
-# baidu_api_url = 'https://aip.baidubce.com/rest/2.0/ocr/v1/webimage?access_token=' + token
 
-# image_url = 'http://www.17500.cn/article/img/id/941875.html'
+class BD_ocr(BDTOKEN):
 
-image_src = YourImgFile     # 需要更改
+    def __init__(self):
 
-f = open(image_src,'rb')
+        print('')
+        print('--+++++++++++++++--')
+        print('--| 百度云OCR识别 |--')
+        print('--+++++++++++++++--')
+        print('')
 
-img = base64.b64encode(f.read())
+        super().__init__(OCRAK, OCRSK)
+        self.__token = super().get_token()
+        self.__highAccuaryUrl = 'https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic?access_token=' + self.__token
+        self.__basicAccuaryUrl = 'https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic?access_token=' + self.__token
+        self.__webPicUrl = 'https://aip.baidubce.com/rest/2.0/ocr/v1/webimage?access_token=' + self.__token
+        self.__handWritingUrl = 'https://aip.baidubce.com/rest/2.0/ocr/v1/handwriting'
+        self.__accuracy = None
 
-params = {'image':img}
+    def set_accuracy(self, accuracy=1):
+        '''
+        setup OCR accuracy: 1: Generally Accuracy, 2: High Accuracy
+        '''
+        self.__accuracy = accuracy
 
-# params = {'url': image_url}
+    def use_local_pic(self, pic_file):
+        if not self.__accuracy:
+            raise Exception("You must set accuracy. Set accuracy use function \"set_accuracy([accuracyValue:1 or 2])\".")
+        if self.__accuracy == 1:
+            url = self.__basicAccuaryUrl
+        elif self.__accuracy == 2:
+            url = self.__highAccuaryUrl
 
-params = urllib.parse.urlencode(params).encode('utf-8')
+        f = open(pic_file, 'rb')
+        img = base64.b64encode(f.read())
+        f.close()
+        params = {'image': img}
 
-headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        return self.get_ocr_infos(url, params)
 
-# 使用requests库
-r = requests.post(baidu_api_url, params=headers, data=params).json()
-# print('requests 结果:')
-# print(r)
-# print(type(r))
+    def use_web_pic(self, pic_url):
+        url = self.__webPicUrl
+        params = {'url': pic_url}
+        return self.get_ocr_infos(url, params)
 
-# print()
+    def get_ocr_infos(self, url, data):
+        content = self.bd_request(url, data).content
+        content = json.loads(content.decode('utf-8'))
+        print(content)
+        return [a['words'] for a in content['words_result']]
 
-# 使用urllib库
-request = urllib.request.Request(url = baidu_api_url, headers = headers, data = params)
-response = urllib.request.urlopen(request)
-content = json.loads(response.read().decode('utf-8'))
+    def use_hand_writing(self, pic_file):
+        pass
 
-# print('urllib结果：')
-# print(content)
-# print(type(content))
-if (content):
-	for a in content['words_result']:
-		print(a['words'])
+
+if __name__ == '__main__':
+    ocr = BD_ocr()
+    ocr.set_accuracy(2)
+    # ocrs = ocr.use_local_pic("/home/hdate/Desktop/12345.png")
+    # print("高精度  :", ocrs)
+    # ocr.set_accuracy(1)
+    ocrs = ocr.use_local_pic("/home/hdate/Desktop/12345.png")
+    print("低精度  :", ocrs)
+    # ocrs = ocr.use_web_pic('https://ss0.bdstatic.com/-0U0bnSm1A5BphGlnYG/tam-ogel/64a6f131ea2fcea88bb1c24d1a307c77_259_194.jpg')
+    # print("网络图片:", ocrs)
+
+
+
