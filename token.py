@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#/usr/bin/env python
 # -*- coding:utf-8 -*-
 
 import json
 import requests
 
 
-class BDTOKEN(object):
+class BDToken(object):
 
     def __init__(self, AK, SK):
         self.__AK = AK
@@ -38,3 +38,9 @@ class BDTOKEN(object):
                 print("第%s次请求中......" % q_times)
 
 
+if __name__ == "__main__":
+	import sys
+	AK = sys.argv[1]
+	SK = sys.argv[2]
+	token = BDToken(AK, SK)
+	print(token)
